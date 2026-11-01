@@ -39,15 +39,24 @@ from config import config
 _jobs: dict[str, dict] = {}
 
 
+import sys
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # ── Lifespan ───────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    print("🚀 RepoRefactor AI API starting...")
+    print("RepoRefactor AI API starting...")
     yield
     # Shutdown — clean up any temp repos still on disk
-    print("👋 Shutting down.")
+    print("Shutting down.")
 
 
 # ── App ────────────────────────────────────────────────────────────────────────
