@@ -101,23 +101,35 @@ def create_plan(repo_context: str, task: str, mode: str = "general") -> str:
 Produce the step-by-step execution plan now.
 """
 
-    for attempt in range(3):
-        try:
-            response = _client.models.generate_content(
-                model=config.GEMINI_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=PLANNER_SYSTEM_PROMPT,
-                    temperature=0.2,
-                    max_output_tokens=2048,
-                ),
-            )
-            return response.text.strip()
-        except Exception as e:
-            err = str(e)
-            if attempt < 2 and any(c in err for c in ("503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED")):
-                wait = 20 * (attempt + 1)
-                print(f"[Planner] Transient error (attempt {attempt+1}/3), retrying in {wait}s: {e}")
-                time.sleep(wait)
-            else:
-                raise
+    models_to_try = [config.GEMINI_MODEL] + [
+        m for m in getattr(config, "FALLBACK_MODELS", []) if m != config.GEMINI_MODEL
+    ]
+    last_err = None
+
+    for model_name in models_to_try:
+        for attempt in range(2):
+            try:
+                response = _client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=PLANNER_SYSTEM_PROMPT,
+                        temperature=0.2,
+                        max_output_tokens=2048,
+                    ),
+                )
+                return response.text.strip()
+            except Exception as e:
+                last_err = e
+                err = str(e)
+                if "RESOURCE_EXHAUSTED" in err or "429" in err:
+                    print(f"[Planner] Quota exhausted on {model_name}, switching to next model...")
+                    break
+                elif "503" in err or "UNAVAILABLE" in err:
+                    time.sleep(10)
+                else:
+                    break
+
+    if last_err:
+        raise last_err
+    return ""

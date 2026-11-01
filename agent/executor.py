@@ -199,13 +199,21 @@ def run_executor(
                             self_corrections += 1
                             tool_result += f"\n\n{build_correction_prompt(tool_result, files_changed)}"
 
-                # Send function response back
-                response = chat.send_message(
-                    types.Part.from_function_response(
-                        name=tool_name,
-                        response={"result": tool_result},
-                    )
+                # Send function response back (with retry on transient errors)
+                func_response_part = types.Part.from_function_response(
+                    name=tool_name,
+                    response={"result": tool_result},
                 )
+                for attempt in range(2):
+                    try:
+                        response = chat.send_message(func_response_part)
+                        break
+                    except Exception as e:
+                        if attempt == 0 and any(code in str(e) for code in ("503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED")):
+                            console.log("[yellow]Transient error sending tool response — waiting 15s...[/yellow]")
+                            time.sleep(15)
+                        else:
+                            raise
 
                 if response.usage_metadata:
                     total_tokens += getattr(response.usage_metadata, "total_token_count", 0)
