@@ -20,6 +20,13 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from datetime import datetime
 
+import sys, io
+
+# Fix Windows cp1252 encoding for emoji output
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+
 from rich.console import Console
 from rich.table import Table
 
