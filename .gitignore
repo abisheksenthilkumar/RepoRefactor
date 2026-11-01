@@ -1,0 +1,45 @@
+# Environment
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+pip-log.txt
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.xml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temp repos cloned by agent
+/tmp_repos/
+/cloned_repos/
+
+# Logs
+*.log
+logs/
+
+# Streamlit
+.streamlit/secrets.toml

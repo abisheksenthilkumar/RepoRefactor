@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  # ── FastAPI Agent API ────────────────────────────────────────────────────────
+  api:
+    build: .
+    ports:
+      - "8000:8080"
+    env_file:
+      - .env
+    environment:
+      - PORT=8080
+    volumes:
+      - /tmp/rra_repos:/tmp/rra_repos
+    restart: unless-stopped
+
+  # ── Streamlit Dashboard ──────────────────────────────────────────────────────
+  dashboard:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    command: >
+      sh -c "pip install -q streamlit plotly httpx &&
+             streamlit run dashboard/app.py --server.port=8501 --server.address=0.0.0.0"
+    depends_on:
+      - api
+    restart: unless-stopped
