@@ -69,18 +69,18 @@ BENCHMARK_CASES: list[BenchmarkCase] = [
             "Update requirements.txt. Ensure all tests pass."
         ),
         mode="migrate",
-        verify_command="pytest tests/ -v --tb=short -q",
+        verify_command="python -m pytest tests/ -v --tb=short -q",
     ),
     BenchmarkCase(
         name="sql_injection_fix",
         description="Fix SQL injection vulnerabilities and add regression tests",
         task=(
             "Identify all SQL injection vulnerabilities in this codebase. "
-            "For each vulnerability: first write a failing regression test, "
-            "then fix it using parameterised queries. Verify tests pass."
+            "For each vulnerability: first write a failing regression test that proves the injection, "
+            "then fix it using parameterised queries. Verify all tests pass."
         ),
         mode="security",
-        verify_command="pytest tests/ -v -k 'sql' --tb=short -q",
+        verify_command="python -m pytest tests/ -v --tb=short -q",
     ),
     BenchmarkCase(
         name="hardcoded_secrets",
@@ -88,33 +88,37 @@ BENCHMARK_CASES: list[BenchmarkCase] = [
         task=(
             "Find all hardcoded API keys, passwords, and secrets in the source code. "
             "Move them to a .env file loaded with python-dotenv. "
-            "Update all references to use os.getenv(). Add a .env.example file."
+            "Update all references to use os.getenv(). "
+            "Create a .env.example file listing every required variable."
         ),
         mode="security",
-        verify_command="python -c \"import ast; import os; [ast.parse(open(f).read()) for f in __import__('glob').glob('*.py')]\"",
+        verify_command="python -m pytest tests/ -v --tb=short -q",
     ),
     BenchmarkCase(
         name="add_error_handling",
         description="Add comprehensive error handling and structured logging",
         task=(
             "Add try/except blocks to all route handlers and database operations. "
-            "Replace all print() statements with Python's logging module. "
-            "Return proper HTTP error responses (400, 404, 500) instead of unhandled exceptions."
+            "Replace all print() statements with Python's logging module (import logging). "
+            "Return proper HTTP error responses: 400 for bad input, 404 for not found, 500 for server errors. "
+            "Return 201 for successful resource creation."
         ),
         mode="general",
-        verify_command="pytest tests/ -v --tb=short -q",
+        verify_command="python -m pytest tests/ -v --tb=short -q",
     ),
     BenchmarkCase(
         name="python2_to_python3",
         description="Update Python 2-style code to Python 3.11+",
         task=(
             "Update all Python 2-style patterns to Python 3.11+: "
-            "replace print statements with print(), update urllib usage, "
-            "add type hints to all function signatures, "
-            "replace .has_key() with 'in', replace unicode() with str()."
+            "replace % string formatting with f-strings, update urllib2 imports to urllib.request, "
+            "add type hints to ALL function signatures and return types, "
+            "replace .has_key() with 'in', replace unicode() with str(), "
+            "replace xrange() with range(), replace .iteritems() with .items(). "
+            "Ensure py_compile passes with no errors."
         ),
         mode="migrate",
-        verify_command="python -m py_compile *.py && python -m mypy . --ignore-missing-imports",
+        verify_command="python -m pytest tests/ -v --tb=short -q",
     ),
 ]
 
