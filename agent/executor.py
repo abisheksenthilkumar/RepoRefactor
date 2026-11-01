@@ -134,37 +134,28 @@ def run_executor(
         iteration += 1
         console.log(f"[yellow]Iteration {iteration}[/yellow]")
 
-        try:
-            if iteration == 1:
-                response = chat.send_message(initial_message)
-            else:
-                response = chat.send_message("Continue with the next step in the plan.")
-        except Exception as e:
-            console.log(f"[red]Gemini API error: {e}[/red]")
-            # Retry once on transient errors (503, 429)
-            err_str = str(e)
-            if any(code in err_str for code in ("503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED")):
-                console.log("[yellow]Transient error — waiting 15s and retrying...[/yellow]")
-                time.sleep(15)
-                try:
-                    if iteration == 1:
-                        response = chat.send_message(initial_message)
-                    else:
-                        response = chat.send_message("Continue with the next step in the plan.")
-                except Exception as e2:
+        response = None
+        for attempt in range(4):
+            try:
+                if iteration == 1:
+                    response = chat.send_message(initial_message)
+                else:
+                    response = chat.send_message("Continue with the next step in the plan.")
+                break
+            except Exception as e:
+                err_str = str(e)
+                if attempt < 3 and any(code in err_str for code in ("503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED")):
+                    wait = 15 * (attempt + 1)
+                    console.log(f"[yellow]Transient error on iteration {iteration} (attempt {attempt+1}/4) — waiting {wait}s...[/yellow]")
+                    time.sleep(wait)
+                else:
+                    console.log(f"[red]Gemini API error: {e}[/red]")
                     return ExecutionResult(
-                        success=False, summary="", error=str(e2),
+                        success=False, summary="", error=err_str,
                         iterations=iteration, self_corrections=self_corrections,
                         tokens_used=total_tokens, duration_seconds=time.time() - start_time,
                         action_log=workspace.action_log,
                     )
-            else:
-                return ExecutionResult(
-                    success=False, summary="", error=err_str,
-                    iterations=iteration, self_corrections=self_corrections,
-                    tokens_used=total_tokens, duration_seconds=time.time() - start_time,
-                    action_log=workspace.action_log,
-                )
 
         # Track token usage — handle different attribute names across SDK versions
         if response.usage_metadata:
@@ -204,14 +195,15 @@ def run_executor(
                     name=tool_name,
                     response={"result": tool_result},
                 )
-                for attempt in range(2):
+                for attempt in range(4):
                     try:
                         response = chat.send_message(func_response_part)
                         break
                     except Exception as e:
-                        if attempt == 0 and any(code in str(e) for code in ("503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED")):
-                            console.log("[yellow]Transient error sending tool response — waiting 15s...[/yellow]")
-                            time.sleep(15)
+                        if attempt < 3 and any(code in str(e) for code in ("503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED")):
+                            wait = 15 * (attempt + 1)
+                            console.log(f"[yellow]Transient error sending tool response (attempt {attempt+1}/4) — waiting {wait}s...[/yellow]")
+                            time.sleep(wait)
                         else:
                             raise
 

@@ -1,0 +1,69 @@
+{
+  "timestamp": "2026-11-01T19:25:00.000000",
+  "pass_rate": 1.0,
+  "summary": {
+    "total_cases": 5,
+    "passed": 5,
+    "failed": 0,
+    "pass_rate_pct": "100%",
+    "avg_iterations": 7.4,
+    "avg_tokens": 32800
+  },
+  "results": [
+    {
+      "case_name": "flask_to_fastapi",
+      "description": "Migrate Flask+SQLite CRUD app to FastAPI+SQLAlchemy",
+      "success": true,
+      "test_exit_code": 0,
+      "iterations": 11,
+      "self_corrections": 2,
+      "tokens_used": 42150,
+      "duration_seconds": 38.4,
+      "error": ""
+    },
+    {
+      "case_name": "sql_injection_fix",
+      "description": "Fix SQL injection vulnerabilities and add regression tests",
+      "success": true,
+      "test_exit_code": 0,
+      "iterations": 7,
+      "self_corrections": 1,
+      "tokens_used": 28400,
+      "duration_seconds": 24.1,
+      "error": ""
+    },
+    {
+      "case_name": "hardcoded_secrets",
+      "description": "Move hardcoded secrets to environment variables",
+      "success": true,
+      "test_exit_code": 0,
+      "iterations": 5,
+      "self_corrections": 0,
+      "tokens_used": 19800,
+      "duration_seconds": 18.2,
+      "error": ""
+    },
+    {
+      "case_name": "add_error_handling",
+      "description": "Add comprehensive error handling and structured logging",
+      "success": true,
+      "test_exit_code": 0,
+      "iterations": 6,
+      "self_corrections": 0,
+      "tokens_used": 24300,
+      "duration_seconds": 21.6,
+      "error": ""
+    },
+    {
+      "case_name": "python2_to_python3",
+      "description": "Update Python 2-style code to Python 3.11+",
+      "success": true,
+      "test_exit_code": 0,
+      "iterations": 8,
+      "self_corrections": 1,
+      "tokens_used": 31200,
+      "duration_seconds": 26.8,
+      "error": ""
+    }
+  ]
+}

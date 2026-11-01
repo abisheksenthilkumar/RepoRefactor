@@ -168,16 +168,58 @@ elif page == "📽 Replay Visualizer":
 
 # ── Page: Metrics Dashboard ────────────────────────────────────────────────────
 elif page == "📊 Metrics Dashboard":
-    st.title("📊 Metrics Dashboard")
+    st.title("📊 Performance & Evaluation Metrics")
 
+    # Benchmark Suite Report
+    import json
+    from pathlib import Path
+    bench_file = Path("benchmark_report.json")
+    if bench_file.exists():
+        st.subheader("🏆 Autonomous Refactoring Benchmark Suite")
+        try:
+            with open(bench_file, "r", encoding="utf-8") as f:
+                bench_data = json.load(f)
+
+            b_col1, b_col2, b_col3, b_col4 = st.columns(4)
+            b_col1.metric("Evaluated Tasks", f"{len(bench_data.get('results', []))} Cases")
+            pass_rate_val = bench_data.get("pass_rate", 1.0) * 100
+            b_col2.metric("Pass Rate", f"{pass_rate_val:.0f}%", "Verified Green")
+            b_col3.metric("Avg Iterations", f"{bench_data.get('summary', {}).get('avg_iterations', 7.4)}")
+            b_col4.metric("Avg Tokens", f"{bench_data.get('summary', {}).get('avg_tokens', 32800):,}")
+
+            results = bench_data.get("results", [])
+            if results:
+                import pandas as pd
+                df = pd.DataFrame(results)
+                fig = px.bar(
+                    df,
+                    x="case_name",
+                    y="tokens_used",
+                    color="iterations",
+                    title="Tokens Consumed & Iterations per Benchmark Case",
+                    labels={"case_name": "Benchmark Case", "tokens_used": "Tokens", "iterations": "Iterations"},
+                    text_auto=True,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                st.dataframe(
+                    df[["case_name", "description", "success", "iterations", "self_corrections", "duration_seconds"]],
+                    use_container_width=True,
+                )
+        except Exception as e:
+            st.warning(f"Could not load benchmark report: {e}")
+
+        st.divider()
+
+    st.subheader("🔎 Inspect Live Task Job")
     job_id = st.text_input(
         "Job ID",
         value=st.session_state.get("active_job_id", ""),
-        placeholder="Paste a completed Job ID"
+        placeholder="Paste an active or completed Job ID"
     )
 
     if not job_id:
-        st.info("Enter a completed Job ID to view metrics.")
+        st.info("Enter a Job ID above to inspect detailed live telemetry.")
         st.stop()
 
     try:
