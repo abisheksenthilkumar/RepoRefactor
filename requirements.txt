@@ -21,8 +21,9 @@ httpx>=0.27.0
 aiofiles>=24.1.0
 rich>=13.9.0       # Beautiful CLI output
 
-# Code Analysis
+# Code Analysis & Linting
 pygments>=2.18.0   # Syntax highlighting in dashboard
+ruff>=0.8.0        # Fast Python linter
 
 # Testing
 pytest>=8.3.0
