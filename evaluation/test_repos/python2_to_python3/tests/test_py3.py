@@ -21,7 +21,6 @@ def test_no_percent_string_formatting():
     tree = ast.parse(source)
     violations = []
     for node in ast.walk(tree):
-        # BinOp with Mod operator applied to a string constant
         if (isinstance(node, ast.BinOp)
                 and isinstance(node.op, ast.Mod)
                 and isinstance(node.left, ast.Constant)
@@ -33,13 +32,22 @@ def test_no_percent_string_formatting():
 def test_no_urllib2():
     """No urllib2 imports — Python 2 only."""
     source, _ = get_source()
-    assert "urllib2" not in source, "urllib2 found — replace with urllib.request"
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                assert alias.name != "urllib2", "import urllib2 found — replace with urllib.request"
+        if isinstance(node, ast.ImportFrom):
+            assert node.module != "urllib2", "from urllib2 found — replace with urllib.request"
 
 
 def test_no_has_key():
-    """No .has_key() calls — use `key in dict`."""
+    """No .has_key() attribute calls — use `key in dict`."""
     source, _ = get_source()
-    assert ".has_key(" not in source, ".has_key() found — replace with `in` operator"
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr == "has_key":
+            raise AssertionError(f"Line {node.lineno}: .has_key() found — replace with in operator")
 
 
 def test_no_unicode_builtin():
@@ -58,13 +66,19 @@ def test_no_unicode_builtin():
 def test_no_xrange():
     """No xrange() calls — use range()."""
     source, _ = get_source()
-    assert "xrange(" not in source, "xrange() found — replace with range()"
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "xrange":
+            raise AssertionError(f"Line {node.lineno}: xrange() found — replace with range()")
 
 
 def test_no_iteritems():
     """No .iteritems() calls — use .items()."""
     source, _ = get_source()
-    assert ".iteritems()" not in source, ".iteritems() found — replace with .items()"
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr == "iteritems":
+            raise AssertionError(f"Line {node.lineno}: .iteritems() found — replace with .items()")
 
 
 def test_functions_have_type_hints():

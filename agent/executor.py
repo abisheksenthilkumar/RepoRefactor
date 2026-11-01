@@ -141,16 +141,37 @@ def run_executor(
                 response = chat.send_message("Continue with the next step in the plan.")
         except Exception as e:
             console.log(f"[red]Gemini API error: {e}[/red]")
-            return ExecutionResult(
-                success=False, summary="", error=str(e),
-                iterations=iteration, action_log=workspace.action_log
-            )
+            # Retry once on transient errors (503, 429)
+            err_str = str(e)
+            if any(code in err_str for code in ("503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED")):
+                console.log("[yellow]Transient error — waiting 15s and retrying...[/yellow]")
+                time.sleep(15)
+                try:
+                    if iteration == 1:
+                        response = chat.send_message(initial_message)
+                    else:
+                        response = chat.send_message("Continue with the next step in the plan.")
+                except Exception as e2:
+                    return ExecutionResult(
+                        success=False, summary="", error=str(e2),
+                        iterations=iteration, self_corrections=self_corrections,
+                        tokens_used=total_tokens, duration_seconds=time.time() - start_time,
+                        action_log=workspace.action_log,
+                    )
+            else:
+                return ExecutionResult(
+                    success=False, summary="", error=err_str,
+                    iterations=iteration, self_corrections=self_corrections,
+                    tokens_used=total_tokens, duration_seconds=time.time() - start_time,
+                    action_log=workspace.action_log,
+                )
 
-        # Track token usage
+        # Track token usage — handle different attribute names across SDK versions
         if response.usage_metadata:
+            um = response.usage_metadata
             total_tokens += (
-                response.usage_metadata.prompt_token_count
-                + response.usage_metadata.candidates_token_count
+                getattr(um, "total_token_count", None)
+                or (getattr(um, "prompt_token_count", 0) + getattr(um, "candidates_token_count", 0))
             )
 
         # Check for function calls
@@ -194,7 +215,17 @@ def run_executor(
             full_text = "".join(
                 p.text for p in parts if hasattr(p, "text")
             )
-            if "TASK_COMPLETE" in full_text or not full_text.strip():
+            # Accept TASK_COMPLETE, empty response, or any plain-text summary as done
+            is_done = (
+                "TASK_COMPLETE" in full_text
+                or not full_text.strip()
+                or any(phrase in full_text.lower() for phrase in (
+                    "all steps complete", "task is complete", "all changes have been made",
+                    "migration complete", "refactoring complete", "all tests pass",
+                    "successfully completed", "implementation is complete",
+                ))
+            )
+            if is_done:
                 console.rule("[bold green]✅ TASK COMPLETE")
                 duration = time.time() - start_time
                 return ExecutionResult(

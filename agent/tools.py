@@ -75,16 +75,42 @@ def edit_file(ctx: WorkspaceContext, path: str, target: str, replacement: str) -
     try:
         fp = ctx._safe_path(path)
         original = fp.read_text(encoding="utf-8", errors="replace")
-        if target not in original:
-            return (
-                f"ERROR: Target string not found in '{path}'.\n"
-                f"Make sure the target matches the file content exactly, "
-                f"including whitespace and indentation."
-            )
-        updated = original.replace(target, replacement, 1)
-        fp.write_text(updated, encoding="utf-8")
-        ctx.log("edit_file", path, f"Replaced {len(target)} chars → {len(replacement)} chars")
-        return f"SUCCESS: '{path}' updated."
+
+        # 1. Direct match
+        if target in original:
+            updated = original.replace(target, replacement, 1)
+            fp.write_text(updated, encoding="utf-8")
+            ctx.log("edit_file", path, f"Replaced {len(target)} chars → {len(replacement)} chars")
+            return f"SUCCESS: '{path}' updated."
+
+        # 2. Line ending normalization (\r\n vs \n)
+        orig_norm = original.replace("\r\n", "\n")
+        target_norm = target.replace("\r\n", "\n")
+        repl_norm = replacement.replace("\r\n", "\n")
+
+        if target_norm in orig_norm:
+            updated = orig_norm.replace(target_norm, repl_norm, 1)
+            fp.write_text(updated, encoding="utf-8")
+            ctx.log("edit_file", path, f"Replaced {len(target)} chars → {len(replacement)} chars (normalized CRLF)")
+            return f"SUCCESS: '{path}' updated."
+
+        # 3. Strip trailing whitespace from lines match
+        orig_lines = [l.rstrip() for l in orig_norm.split("\n")]
+        target_lines = [l.rstrip() for l in target_norm.split("\n")]
+        joined_orig = "\n".join(orig_lines)
+        joined_target = "\n".join(target_lines)
+
+        if joined_target in joined_orig:
+            updated = joined_orig.replace(joined_target, repl_norm, 1)
+            fp.write_text(updated, encoding="utf-8")
+            ctx.log("edit_file", path, f"Replaced {len(target)} chars → {len(replacement)} chars (whitespace-relaxed)")
+            return f"SUCCESS: '{path}' updated."
+
+        return (
+            f"ERROR: Target string not found in '{path}'.\n"
+            f"Make sure the target matches the file content exactly, "
+            f"including whitespace and indentation."
+        )
     except Exception as e:
         return f"ERROR editing '{path}': {e}"
 

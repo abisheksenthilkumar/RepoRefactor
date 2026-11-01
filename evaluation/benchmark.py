@@ -195,6 +195,9 @@ def run_benchmark(cases: list[BenchmarkCase] | None = None) -> list[BenchmarkRes
                 error=result.error or (verify.stderr[:200] if verify.returncode != 0 else ""),
             )
         except Exception as e:
+            import traceback
+            err_trace = traceback.format_exc()
+            console.print(f"[red]Benchmark exception in {case.name}: {e}[/red]")
             bench_result = BenchmarkResult(
                 case_name=case.name,
                 success=False,
@@ -203,7 +206,7 @@ def run_benchmark(cases: list[BenchmarkCase] | None = None) -> list[BenchmarkRes
                 self_corrections=0,
                 tokens_used=0,
                 duration_seconds=0,
-                error=str(e),
+                error=f"{e}: {err_trace[:300]}",
             )
         finally:
             shutil.rmtree(str(work_dir), ignore_errors=True)
@@ -211,6 +214,12 @@ def run_benchmark(cases: list[BenchmarkCase] | None = None) -> list[BenchmarkRes
         results.append(bench_result)
         status_icon = "✅" if bench_result.success else "❌"
         console.print(f"  Result: {status_icon} | Iterations: {bench_result.iterations} | Tokens: {bench_result.tokens_used:,}")
+        if not bench_result.success and bench_result.error:
+            console.print(f"[dim red]  Detail: {bench_result.error[:180]}[/dim red]")
+
+        # Pacing: brief delay between cases to avoid API rate limits
+        import time
+        time.sleep(6)
 
     return results
 

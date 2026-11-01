@@ -11,6 +11,8 @@ Responsibility:
 
 from __future__ import annotations
 
+import time
+
 from google import genai
 from google.genai import types
 
@@ -99,14 +101,23 @@ def create_plan(repo_context: str, task: str, mode: str = "general") -> str:
 Produce the step-by-step execution plan now.
 """
 
-    response = _client.models.generate_content(
-        model=config.GEMINI_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=PLANNER_SYSTEM_PROMPT,
-            temperature=0.2,
-            max_output_tokens=2048,
-        ),
-    )
-
-    return response.text.strip()
+    for attempt in range(3):
+        try:
+            response = _client.models.generate_content(
+                model=config.GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=PLANNER_SYSTEM_PROMPT,
+                    temperature=0.2,
+                    max_output_tokens=2048,
+                ),
+            )
+            return response.text.strip()
+        except Exception as e:
+            err = str(e)
+            if attempt < 2 and any(c in err for c in ("503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED")):
+                wait = 20 * (attempt + 1)
+                print(f"[Planner] Transient error (attempt {attempt+1}/3), retrying in {wait}s: {e}")
+                time.sleep(wait)
+            else:
+                raise
